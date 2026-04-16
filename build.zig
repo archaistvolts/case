@@ -14,10 +14,10 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = b.path("src/c_api.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
     lib.root_module.addImport("case", mod);
-    lib.linkLibC();
     b.installArtifact(lib);
     b.getInstallStep().dependOn(
         &b.addInstallHeaderFile(b.path("src/case.h"), "case.h").step,
@@ -32,13 +32,13 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = b.path("src/tests.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
         .filters = filters,
     });
-    tests.linkLibC();
     tests.root_module.addImport("case", mod);
     // needed to keep Case enums in sync between src/lib.zig and src/case.h
-    tests.addIncludePath(b.path("src"));
+    tests.root_module.addIncludePath(b.path("src"));
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_tests.step);
@@ -50,11 +50,11 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = null,
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
-    c_api_test_exe.addCSourceFile(.{ .file = b.path("src/test.c") });
-    c_api_test_exe.linkLibC();
-    c_api_test_exe.linkLibrary(lib);
+    c_api_test_exe.root_module.addCSourceFile(.{ .file = b.path("src/test.c") });
+    c_api_test_exe.root_module.linkLibrary(lib);
     const run_c_api_test = b.addRunArtifact(c_api_test_exe);
     // for some reason, running this fails on windows
     // TODO figure out why this fails. fix. re-enable
