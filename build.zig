@@ -3,10 +3,8 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const mod = b.addModule(
-        "case",
-        .{ .root_source_file = b.path("src/lib.zig") },
-    );
+
+    const mod = b.addModule("case", .{ .root_source_file = b.path("src/lib.zig") });
 
     const lib = b.addLibrary(.{
         .name = "case",
@@ -22,21 +20,30 @@ pub fn build(b: *std.Build) !void {
     b.getInstallStep().dependOn(
         &b.addInstallHeaderFile(b.path("src/case.h"), "case.h").step,
     );
+
+    // tests
     const filters = if (b.option([]const u8, "test-filter", "test filter")) |f|
         try b.allocator.dupe([]const u8, &.{f})
     else
         &.{};
-
+    const translated = b.addTranslateC(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/case.h"),
+    });
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/tests.zig"),
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "case", .module = mod },
+                .{ .name = "case-header", .module = translated.createModule() },
+            },
         }),
         .filters = filters,
     });
-    tests.root_module.addImport("case", mod);
     // needed to keep Case enums in sync between src/lib.zig and src/case.h
     tests.root_module.addIncludePath(b.path("src"));
     const run_tests = b.addRunArtifact(tests);

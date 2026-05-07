@@ -49,9 +49,7 @@ fn expectCase(
 
 // ensure all values correspond to the Case enum defined in src/case.h
 test "check enum values" {
-    const ch = @cImport({
-        @cInclude("./case.h");
-    });
+    const ch = @import("case-header");
     inline for (comptime std.meta.tags(case.Case)) |tag| {
         comptime {
             const tag_name = @tagName(tag);
